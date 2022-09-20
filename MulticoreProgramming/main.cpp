@@ -4,28 +4,11 @@
 #include <functional>
 #include <mutex>
 #include <chrono>
+#include "Timer.hpp"
 
 using namespace std;
 mutex l;
 
-// ------------- 타이머 -------------------
-namespace timer
-{
-	using clk = std::chrono::high_resolution_clock;
-	using namespace std::chrono;
-	using namespace std::literals::string_view_literals;
-
-	clk::time_point thread_local static StopWatch;
-	inline void start() {
-		StopWatch = clk::now();
-	}
-
-	inline void end(const std::string_view mess = ""sv) {
-		auto t = clk::now() - StopWatch;
-		std::cout << mess << duration_cast<milliseconds>(t) << '\n';
-	}
-}
-// ---------------------------------------
 atomic_int victim = 0;
 bool volatile flag[2] = { false, false };
 
@@ -109,21 +92,21 @@ int main()
 	addr -= 1;
 	bound = reinterpret_cast<int*>(addr);
 	*bound = 0;
-	timer::start();
+	timer::reset();
 	thread tt11(ThreadFunc11);
 	thread tt22(ThreadFunc22);
 	tt11.join();
 	tt22.join();
-	timer::end("[ ");
+	timer::elapsed("[ ");
 	cout << error << endl;
 
 	return 0;
-	timer::start();
+	timer::reset();
 	thread tt1(ThreadFunc0);
 	thread tt2(ThreadFunc1);
 	tt1.join();
 	tt2.join();
-	timer::end("[ ");
+	timer::elapsed("[ ");
 
 	int count = 0;
 	for (int i = 0; i < SIZE; ++i)
@@ -136,21 +119,21 @@ int main()
 
 	return 0;
 
-	timer::start();
+	timer::reset();
 	thread t1(f, 0);
 	thread t2(f, 1);
 	t1.join();
 	t2.join();
 	cout << sum << endl;
-	timer::end("[ ");
+	timer::elapsed("[ ");
 	return 0;
 
 	for (int threadNum = 1; threadNum <= 8; threadNum *= 2) {
 		vector<thread> threadPool;
-		timer::start();
+		timer::reset();
 		threadPool.push_back(move(thread(f, threadNum)));
 		for (auto& t : threadPool) t.join();
-		timer::end("[ " + to_string(threadNum) + " Threads]\t[ ");
+		timer::elapsed("[ " + to_string(threadNum) + " Threads]\t[ ");
 	}
 }
 

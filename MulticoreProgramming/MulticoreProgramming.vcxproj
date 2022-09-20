@@ -131,7 +131,6 @@
     <ClCompile Include="Bakery.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Bakery.h" />
     <ClInclude Include="Timer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

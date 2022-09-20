@@ -23,8 +23,5 @@
     <ClInclude Include="Timer.hpp">
       <Filter>소스 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Bakery.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
