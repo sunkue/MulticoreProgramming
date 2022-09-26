@@ -73,6 +73,7 @@ public:
 	void lock() {
 		flags[tid] = true;
 		labels[tid] = *ranges::max_element(labels) + 1;
+
 		for (size_t k = -1; ranges::any_of(views::take(labels, threadNum),
 			[&](const auto labelK) {
 				k++;
@@ -110,7 +111,6 @@ void Func(int threadNum) {
 
 void SetTidAndExecFunc(int threadNum, int threadId) {
 	tid = threadId;
-	atomic_thread_fence(memory_order_seq_cst);
 	Func(threadNum);
 }
 
@@ -148,3 +148,5 @@ int main() {
 	MutableLock::unlock = []() { bakeryArray.unlock(); };
 	DoJob();
 }
+
+
