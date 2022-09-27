@@ -1,6 +1,6 @@
 /*
 *	2016182024 À±¼±±Ô
-*	
+*	CAS lock algorithm
 *	c++ 20, x64, Release
 */
 
@@ -15,8 +15,6 @@
 #include <iostream>
 #include <chrono>
 
-#include "CAS.hpp"
-
 namespace timer {
 	using clk = std::chrono::high_resolution_clock;
 	using namespace std::chrono;
@@ -30,12 +28,24 @@ namespace timer {
 
 using namespace std;
 
+template <class T> concept AtomicableType = atomic<T>::is_always_lock_free;
+
+template <AtomicableType T> bool CAS(atomic<T>* addr, T expected, T newValue) {
+	return atomic_compare_exchange_strong(addr, &expected, newValue);
+}
+
+template <AtomicableType T> bool CAS(volatile T* addr, T expected, T newValue) {
+	return atomic_compare_exchange_strong(
+		reinterpret_cast<volatile atomic<T> *>(addr),
+		&expected, newValue);
+}
+
 class CASLock
 {
 	volatile bool Locked = false;
 public:
 	void lock() {
-		while (!CAS::CAS(&Locked, false, true));
+		while (!CAS(&Locked, false, true));
 	}
 	void unlock() {
 		Locked = false;
