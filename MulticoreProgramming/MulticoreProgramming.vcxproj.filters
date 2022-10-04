@@ -11,19 +11,31 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Tested Case\Lock">
+      <UniqueIdentifier>{c4282186-6173-4b10-8d6b-6ed026e4d820}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tested Case\DataStructure">
+      <UniqueIdentifier>{870e49b7-d78a-4d1c-a723-f0aa7d6c10b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tested Case\DataStructure\Set">
+      <UniqueIdentifier>{9dee9188-78f7-4b42-ba98-96c1ff30d0d6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Bakery.cpp">
-      <Filter>Tested Case</Filter>
-    </ClCompile>
-    <ClCompile Include="CASLock.cpp">
-      <Filter>Tested Case</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="Peterson.cpp">
-      <Filter>Tested Case</Filter>
+      <Filter>Tested Case\Lock</Filter>
+    </ClCompile>
+    <ClCompile Include="CASLock.cpp">
+      <Filter>Tested Case\Lock</Filter>
+    </ClCompile>
+    <ClCompile Include="Bakery.cpp">
+      <Filter>Tested Case\Lock</Filter>
+    </ClCompile>
+    <ClCompile Include="coarse_grained set.cpp">
+      <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
