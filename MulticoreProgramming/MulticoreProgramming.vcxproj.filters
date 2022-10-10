@@ -40,6 +40,9 @@
     <ClCompile Include="fine_grained set.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
+    <ClCompile Include="optimistic set.cpp">
+      <Filter>Tested Case\DataStructure\Set</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Timer.hpp">
