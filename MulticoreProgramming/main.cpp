@@ -40,29 +40,24 @@ public:
 	}
 
 	bool add(int x) {
-		while (true) {
-			auto prev = head;
-			auto curr = prev->next;
+		Node* prev, * curr, * node{};
+		do {
+			prev = head;
+			curr = prev->next;
 
 			while (curr->value < x) {
 				prev = curr;
 				curr = curr->next;
 			}
 
-			scoped_lock lck{ *prev , *curr };
-
-			if (!validate(prev, curr)) continue;
-
-			if (curr->value != x) {
-				auto node = new Node(x);
-				node->next = curr;
-				prev->next = node;
-				return true;
-			}
-			else {
+			if (curr->value == x) {
 				return false;
 			}
-		}
+
+			node = new Node(x);
+			node->next = curr;
+		} while (!CAS::CAS(prev->next, curr, node));
+		return true;
 	}
 
 	bool remove(int x) {
@@ -80,7 +75,9 @@ public:
 			if (!validate(prev, curr)) continue;
 
 			if (curr->value == x) {
-				curr->disable();
+				curr->disable(); // 순서에 따라 
+								 // valid => invalid 오판 :: 허용가능
+								 // invalid => valid 오판 :: 심각한 버그
 				prev->next = curr->next;
 				return true;
 			}
@@ -91,22 +88,10 @@ public:
 	}
 
 	bool contains(int x) {
-		while (true) {
-			auto prev = head;
-			auto curr = prev->next;
-
-			while (curr->value < x) {
-				prev = curr;
-				curr = curr->next;
-			}
-
-			scoped_lock lck{ *prev , *curr };
-
-			if (!validate(prev, curr)) continue;
-
-			auto contains = curr->value == x;
-			return contains;
-		}
+		auto curr = head;
+		while (curr->value < x) curr = curr->next;
+		auto contains = curr->value == x;
+		return contains;
 	}
 
 	void show() {
@@ -131,8 +116,8 @@ public:
 
 	bool validate(Node* prev, Node* curr) {
 		auto alive = prev->on && curr->on;
-		auto noIntecept = prev->next == curr;
-		return alive && noIntecept;
+		auto noIntercept = prev->next == curr;
+		return alive && noIntercept;
 	}
 };
 
@@ -157,6 +142,24 @@ void Benchmark(int threadNum) {
 
 int main()
 {
+	int* p = new int;
+	int* q = new int;
+	int* r = new int;
+	cout << "p" << p << endl;
+	cout << "q" << q << endl;
+	cout << "r" << r << endl;
+	bool b=1, e=1, n=0;
+	cout << "b" << b << endl;
+	cout << "e" << e << endl;
+	cout << "n" << n << endl;
+	cout << boolalpha << CAS::CASEx(p, p, r, b, b, n) << endl;
+	cout << "p" << p << endl;
+	cout << "q" << q << endl;
+	cout << "r" << r << endl;
+	cout << "b" << b << endl;
+	cout << "e" << e << endl;
+	cout << "n" << n << endl;
+	return 0;
 	auto DoJob = []() {
 		for (int threadNum = 1; threadNum <= MAX_THREAD; threadNum *= 2) {
 			s.reset();
@@ -170,6 +173,7 @@ int main()
 		}
 	};
 
+	cout << "=========== lazy 게으른동기화 ===========" << endl;
 	DoJob();
 }
 
