@@ -27,22 +27,22 @@ struct Node : public mutex {
 	void disable() { on = false; };
 	int value{};
 	bool on{ true };
-	Node* next{};
+	atomic<shared_ptr<Node>> next{};
 };
 
 class SET {
-	Node* head{}, * tail{};
+	atomic<shared_ptr<Node>> head{}, tail{};
 public:
 	SET() {
-		head = new Node(std::numeric_limits<int>::min());
-		tail = new Node(std::numeric_limits<int>::max());
-		head->next = tail;
+		head = make_shared<Node>(std::numeric_limits<int>::min());
+		tail = make_shared<Node>(std::numeric_limits<int>::max());
+		head.load()->next.store(tail);
 	}
 
 	bool add(int x) {
 		while (true) {
-			auto prev = head;
-			auto curr = prev->next;
+			auto prev = head.load();
+			auto curr = prev->next.load();
 
 			while (curr->value < x) {
 				prev = curr;
@@ -54,9 +54,9 @@ public:
 			if (!validate(prev, curr)) continue;
 
 			if (curr->value != x) {
-				auto node = new Node(x);
-				node->next = curr;
-				prev->next = node;
+				auto node = make_shared<Node>(x);
+				node->next.store(curr);
+				prev->next.store(node);
 				return true;
 			}
 			else {
@@ -67,8 +67,8 @@ public:
 
 	bool remove(int x) {
 		while (true) {
-			auto prev = head;
-			auto curr = prev->next;
+			auto prev = head.load();
+			auto curr = prev->next.load();
 
 			while (curr->value < x) {
 				prev = curr;
@@ -80,8 +80,10 @@ public:
 			if (!validate(prev, curr)) continue;
 
 			if (curr->value == x) {
-				curr->disable();
-				prev->next = curr->next;
+				curr->disable(); // 순서에 따라 
+								 // valid => invalid 오판 :: 허용가능
+								 // invalid => valid 오판 :: 심각한 버그
+				prev->next.store(curr->next);
 				return true;
 			}
 			else {
@@ -91,28 +93,16 @@ public:
 	}
 
 	bool contains(int x) {
-		while (true) {
-			auto prev = head;
-			auto curr = prev->next;
-
-			while (curr->value < x) {
-				prev = curr;
-				curr = curr->next;
-			}
-
-			scoped_lock lck{ *prev , *curr };
-
-			if (!validate(prev, curr)) continue;
-
-			auto contains = curr->value == x;
-			return contains;
-		}
+		auto curr = head.load();
+		while (curr->value < x) curr = curr->next;
+		auto contains = curr->value == x;
+		return contains;
 	}
 
 	void show() {
-		auto node = head->next;
+		auto node = head.load()->next.load();
 		for (int i = 0; i < 20; i++) {
-			if (node == tail)break;
+			if (node == tail.load())break;
 			cout << node->value << " ";
 			node = node->next;
 		}
@@ -120,22 +110,13 @@ public:
 	}
 
 	void reset() {
-		auto curr = head->next;
-		while (curr != tail) {
-			auto node = curr;
-			curr = curr->next;
-			delete node;
-		}
-		head->next = tail;
+		head.load()->next.store(tail);
 	}
 
-	bool validate(Node* prev, Node* curr) {
-		auto node = head;
-		while (node->value <= prev->value) {
-			if (node == prev) return prev->next == curr;
-			node = node->next;
-		}
-		return false;
+	bool validate(const atomic<shared_ptr<Node>> prev, const atomic<shared_ptr<Node>> curr) {
+		auto alive = prev.load()->on && curr.load()->on;
+		auto noIntercept = prev.load()->next.load() == curr.load();
+		return alive && noIntercept;
 	}
 };
 
@@ -173,7 +154,8 @@ int main()
 		}
 	};
 
-	cout << "=========== optimistic 낙천적동기화 ===========" << endl;
+	cout << "=========== safe lazy 메모리관리 게으른동기화 ===========" << endl;
+
 	DoJob();
 }
 

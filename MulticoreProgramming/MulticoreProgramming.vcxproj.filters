@@ -20,6 +20,9 @@
     <Filter Include="Tested Case\DataStructure\Set">
       <UniqueIdentifier>{9dee9188-78f7-4b42-ba98-96c1ff30d0d6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tested Case\HistoryChecker">
+      <UniqueIdentifier>{9d2ce8e0-fd40-4623-b0fd-6354f597e5d8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -41,6 +44,15 @@
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
     <ClCompile Include="optimistic set.cpp">
+      <Filter>Tested Case\DataStructure\Set</Filter>
+    </ClCompile>
+    <ClCompile Include="lazy set.cpp">
+      <Filter>Tested Case\DataStructure\Set</Filter>
+    </ClCompile>
+    <ClCompile Include="HistoryChecker.cpp">
+      <Filter>Tested Case\HistoryChecker</Filter>
+    </ClCompile>
+    <ClCompile Include="safe lazy set.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
   </ItemGroup>

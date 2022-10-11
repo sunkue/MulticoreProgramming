@@ -24,7 +24,9 @@ constexpr int BECNMARK_LOOP_COUNT = 400'0000;
 
 struct Node : public mutex {
 	Node(int v) :value{ v } {}
+	void disable() { on = false; };
 	int value{};
+	bool on{ true };
 	Node* next{};
 };
 
@@ -38,78 +40,63 @@ public:
 	}
 
 	bool add(int x) {
-		auto node = new Node(x);
-		head->lock();
-		auto prev = head;
-		auto curr = prev->next;
-		curr->lock();
-		while (curr->value < node->value) {
-			prev->unlock();
-			prev = curr;
-			curr = curr->next;
-			curr->lock();
-		}
-		if (curr->value != x) {
-			prev->next = node;
-			node->next = curr;
-			curr->unlock();
-			prev->unlock();
-			return true;
-		}
-		else {
-			curr->unlock();
-			prev->unlock();
-			delete node;
-			return false;
+		while (true) {
+			auto prev = head;
+			auto curr = prev->next;
+
+			while (curr->value < x) {
+				prev = curr;
+				curr = curr->next;
+			}
+
+			scoped_lock lck{ *prev , *curr };
+
+			if (!validate(prev, curr)) continue;
+
+			if (curr->value != x) {
+				auto node = new Node(x);
+				node->next = curr;
+				prev->next = node;
+				return true;
+			}
+			else {
+				return false;
+			}
 		}
 	}
 
 	bool remove(int x) {
-		head->lock();
-		auto prev = head;
-		auto curr = prev->next;
-		curr->lock();
-		while (curr->value < x) {
-			prev->unlock();
-			prev = prev->next;
-			curr = curr->next;
-			curr->lock();
-		}
-		if (curr->value == x) {
-			prev->next = curr->next;
-			curr->unlock();
-			delete curr;
-			prev->unlock();
-			return true;
-		}
-		else {
-			curr->unlock();
-			prev->unlock();
-			return false;
+		while (true) {
+			auto prev = head;
+			auto curr = prev->next;
+
+			while (curr->value < x) {
+				prev = curr;
+				curr = curr->next;
+			}
+
+			scoped_lock lck{ *prev , *curr };
+
+			if (!validate(prev, curr)) continue;
+
+			if (curr->value == x) {
+				curr->disable(); // 순서에 따라 
+								 // valid => invalid 오판 :: 허용가능
+								 // invalid => valid 오판 :: 심각한 버그
+				prev->next = curr->next;
+				return true;
+			}
+			else {
+				return false;
+			}
 		}
 	}
 
 	bool contains(int x) {
-		head->lock();
-		auto prev = head;
-		auto curr = prev->next;
-		curr->lock();
-		while (curr->value < x) {
-			prev->unlock();
-			prev = prev->next;
-			curr = curr->next;
-			curr->lock();
-		}
-		if (curr->value == x) {
-			curr->unlock();
-			prev->unlock();
-			return true;
-		}
-		else {
-			curr->unlock();
-			prev->unlock();
-			return false;
-		}
+		auto curr = head;
+		while (curr->value < x) curr = curr->next;
+		auto contains = curr->value == x;
+		return contains;
 	}
 
 	void show() {
@@ -130,6 +117,12 @@ public:
 			delete node;
 		}
 		head->next = tail;
+	}
+
+	bool validate(Node* prev, Node* curr) {
+		auto alive = prev->on && curr->on;
+		auto noIntercept = prev->next == curr;
+		return alive && noIntercept;
 	}
 };
 
@@ -167,7 +160,7 @@ int main()
 		}
 	};
 
-	cout << "=========== fine_grained 세밀한동기화 ===========" << endl;
+	cout << "=========== lazy 게으른동기화 ===========" << endl;
 	DoJob();
 }
 

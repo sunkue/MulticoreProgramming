@@ -133,7 +133,7 @@ void Benchmark(int threadNum) {
 int main()
 {
 	auto DoJob = []() {
-		for (int threadNum = 1; threadNum <= 8; threadNum *= 2) {
+		for (int threadNum = 1; threadNum <= 16; threadNum *= 2) {
 			s.reset();
 			timer::reset();
 			vector<thread> threadPool; threadPool.reserve(threadNum);
@@ -144,6 +144,7 @@ int main()
 		}
 	};
 
+	cout << "=========== coarse_grained 성긴동기화 ===========" << endl;
 	DoJob();
 }
 
