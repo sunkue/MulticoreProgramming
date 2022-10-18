@@ -42,7 +42,8 @@ namespace CAS {
 	}
 
 	template<class _Ty, class _TagTy = uint8_t>
-	struct TaggedPointer {
+	class TaggedPointer {
+	public:
 		using Ptr = _Ty*;
 		using Tag = _TagTy;
 
@@ -51,36 +52,46 @@ namespace CAS {
 #else // xxxx00
 		constexpr size_t tagmask = 0b11;
 #endif // _WIN64
-		static inline constexpr size_t PTR_MASK = (SIZE_MAX ^ tagmask);
+		static inline constexpr size_t PTR_MASK = (SIZE_MAX ^ TAG_MASK);
 
-		size_t taggedPtr;
+		size_t taggedPtr{};
 		
-		Ptr getPtr() {
+		Ptr getPtr()const {
 			return reinterpret_cast<Ptr>(taggedPtr & PTR_MASK);
 		}
 
-		Tag getTag() {
-			return reinterpret_cast<Tag>(taggedPtr & TAG_MASK);
+		Tag getTag()const {
+			return (taggedPtr & TAG_MASK);
 		}
 
-		pair<Ptr,Tag> getPtrTag() {
+		std::pair<Ptr, Tag> getPtrTag()const {
 			size_t snapshot = taggedPtr;
-			auto ptr = reinterpret_cast<Ptr>(snapshot & PTR_MASK);
-			auto tag = reinterpret_cast<Tag>(snapshot & TAG_MASK);
+			auto ptr = reinterpret_cast<Ptr>(snapshot) & PTR_MASK;
+			auto tag = (snapshot & TAG_MASK);
 			return std::make_pair(ptr, tag);
 		}
 
+		class TagOverflowed : public std::exception {
+		public:
+			TagOverflowed() noexcept : std::exception("Tag bits overflowed.", 1) {}
+		};
+
+		static void checkTagOverflow(Tag tag) {
+			if ((tag & TAG_MASK) != tag) throw TagOverflowed();
+		}
+
 		bool CAS(Ptr o_ptr, Ptr n_ptr, Tag o_tag, Tag n_tag) {
-			auto oTaggedPtr = reinterpret_cast<size_t>(o_ptr & o_tag);
-			auto nTaggedPtr = reinterpret_cast<size_t>(n_ptr & n_tag);
+			checkTagOverflow(o_tag);
+			checkTagOverflow(n_tag);
+			auto oTaggedPtr = reinterpret_cast<size_t>(o_ptr) & o_tag;
+			auto nTaggedPtr = reinterpret_cast<size_t>(n_ptr) & n_tag;
 			return std::atomic_compare_exchange_strong(
-				reinterpret_cast<atomic_size_t*>(&taggedPtr), &oTaggedPtr, nTaggedPtr);
+				reinterpret_cast<std::atomic_size_t*>(&taggedPtr), &oTaggedPtr, nTaggedPtr);
 		}
 
 		bool attemptTag(Ptr ptr, Tag tag) {
-			auto o_next = reinterpret_cast<size_t>(ptr & tag);
-			return  std::atomic_compare_exchange_strong(
-				reinterpret_cast<atomic_size_t*>(&taggedPtr), &o_next, o_next);
+			checkTagOverflow(tag);
+			return CAS(ptr, ptr, getTag(), tag);
 		}
 	};
 }

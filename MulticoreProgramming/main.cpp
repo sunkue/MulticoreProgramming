@@ -195,6 +195,11 @@ void Benchmark(int threadNum) {
 
 int main()
 {
+	CAS::TaggedPointer<int> ff;
+	int x;
+	ff.attemptTag(&x, 123);
+
+
 	auto DoJob = []() {
 		for (int threadNum = 1; threadNum <= MAX_THREAD; threadNum *= 2) {
 			s.reset();
