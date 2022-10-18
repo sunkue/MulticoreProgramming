@@ -556,7 +556,7 @@ public:
 		while (curr->value < x) {
 			curr = curr->next.get_ptr_mark(&mark);
 		}
-		return curr->value == x && mark;
+		return curr->value == x && !mark;
 	}
 
 	void print20() {
@@ -580,7 +580,6 @@ public:
 	}
 };
 
-
 class LF_SET2 {
 	NODE head, tail;
 public:
@@ -595,13 +594,12 @@ public:
 	pair<NODE*, NODE*> find(int x) {
 		while (true) {
 		Retry:
-			NODE* prev, * curr, * next{};
-			prev = &head;
-			curr = prev->next;
+			auto prev = &head;
+			auto curr = prev->next;
 			while (true) {
 				bool on;
 				auto currInfo = curr->getNextAndOn();
-				next = currInfo.first;
+				auto next = currInfo.first;
 				on = currInfo.second;
 				while (!on) { // 삭제된 노드 curr.
 					if (CAS::CAS(prev->next, curr, next,
@@ -626,32 +624,31 @@ public:
 
 	bool ADD(int x)
 	{
-		NODE* prev, * curr, * node{};
 		while (true) {
 			auto target = find(x);
-			prev = target.first;
-			curr = target.second;
+			auto prev = target.first;
+			auto curr = target.second;
 			if (curr->v == x)
 				return false;
-			node = new NODE(x, curr);
+			auto node = new NODE(x, curr);
 			if (CAS::CAS(prev->next, curr, node
 				, prev->on, true, true))
 				return true;
+			delete node;
 		}
 	}
 
 	bool REMOVE(int x)
 	{
 		while (true) {
-			NODE* prev, * curr, * next;
 			auto target = find(x);
-			prev = target.first;
-			curr = target.second;
+			auto prev = target.first;
+			auto curr = target.second;
 
 			if (curr->v != x)
 				return false;
 
-			next = curr->next;
+			auto next = curr->next;
 
 			if (!CAS::CAS(curr->next, next, next
 				, curr->on, true, false))
