@@ -31,13 +31,7 @@ struct Node {
 	Node* next{};
 
 	pair<Node*, bool> getNextAndOn() {
-		while (true) {
-			Node* n = next;
-			bool o = on;
-			//if (CAS::CAS(next, n, n, on, o, o)) {
-			return make_pair(n, o);
-			//}
-		}
+		return make_pair(next, on);
 	}
 };
 
@@ -54,13 +48,12 @@ public:
 	pair<Node*, Node*> find(int x) {
 		while (true) {
 		Retry:
-			Node* prev, * curr, * next{};
-			prev = head;
-			curr = prev->next;
+			auto prev = head;
+			auto curr = prev->next;
 			while (true) {
 				bool on;
 				auto currInfo = curr->getNextAndOn();
-				next = currInfo.first;
+				auto next = currInfo.first;
 				on = currInfo.second;
 				while (!on) { // 삭제된 노드 curr.
 					if (CAS::CAS(prev->next, curr, next,
@@ -84,17 +77,17 @@ public:
 	}
 
 	bool add(int x) {
-		Node* prev, * curr, * node{};
 		while (true) {
 			auto target = find(x);
-			prev = target.first;
-			curr = target.second;
+			auto prev = target.first;
+			auto curr = target.second;
 			if (curr->value == x)
 				return false;
-			node = new Node(x, curr);
+			auto node = new Node(x, curr);
 			if (CAS::CAS(prev->next, curr, node
 				, prev->on, true, true))
 				return true;
+			delete node;
 		}
 	}
 

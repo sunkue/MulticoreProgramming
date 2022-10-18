@@ -146,11 +146,11 @@ public:
 
 	bool contains(int x) {
 		auto curr = head;
-		bool mark;
+		bool mark{};
 		while (curr->value < x) {
 			curr = curr->next.get_ptr_mark(&mark);
 		}
-		return curr->value == x && mark;
+		return curr->value == x && !mark;
 	}
 
 	void show() {

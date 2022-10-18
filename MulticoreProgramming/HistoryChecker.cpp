@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <mutex>
+#include "CAS.hpp"
 
 using namespace std;
 using namespace chrono;
@@ -24,7 +25,12 @@ public:
 	NODE* next;
 	NODE() : v(-1), next(nullptr) {}
 	NODE(int x) : v(x), next(nullptr) {}
+	NODE(int value, NODE* next) :v{ value }, next{ next } {}
 	void disable() { on = false; };
+
+	pair<NODE*, bool> getNextAndOn() {
+		return make_pair(next, on);
+	}
 };
 
 class SET {
@@ -422,10 +428,163 @@ public:
 	}
 };
 
-class NB_SET {
+class Node;
+class LF_PTR {
+	unsigned long long next;
+public:
+	LF_PTR() : next(0) {}
+	LF_PTR(bool marking, Node* ptr)
+	{
+		next = reinterpret_cast<unsigned long long>(ptr);
+		if (true == marking) next = next | 1;
+	}
+	Node* get_ptr()
+	{
+		return reinterpret_cast<Node*>(next & 0xFFFFFFFFFFFFFFFE);
+	}
+	bool get_removed()
+	{
+		return (next & 1) == 1;
+	}
+	Node* get_ptr_mark(bool* removed)
+	{
+		unsigned long long cur_next = next;
+		*removed = (cur_next & 1) == 1;
+		return reinterpret_cast<Node*>(cur_next & 0xFFFFFFFFFFFFFFFE);
+	}
+	bool CAS(Node* o_ptr, Node* n_ptr, bool o_mark, bool n_mark)
+	{
+		unsigned long long o_next = reinterpret_cast<unsigned long long>(o_ptr);
+		if (true == o_mark) o_next++;
+		unsigned long long n_next = reinterpret_cast<unsigned long long>(n_ptr);
+		if (true == n_mark) n_next++;
+		return atomic_compare_exchange_strong(
+			reinterpret_cast<atomic_uint64_t*>(&next), &o_next, n_next);
+	}
+	bool attempt_mark(Node* ptr, bool mark) {
+		unsigned long long o_next = reinterpret_cast<unsigned long long>(ptr);
+		unsigned long long n_next = o_next;
+		if (true == mark) n_next++;
+		return atomic_compare_exchange_strong(
+			reinterpret_cast<atomic_uint64_t*>(&next), &o_next, n_next);
+	}
+};
+
+class Node {
+public:
+	int value;
+	LF_PTR next;
+	Node() : value(-1), next(false, nullptr) {}
+	Node(int x) : value(x), next(false, nullptr) {}
+	Node(int x, Node* ptr) : value(x), next(false, ptr) {}
+};
+
+class LF_SET1 {
+	Node* head{}, * tail{};
+public:
+	LF_SET1() {
+		head = new Node(std::numeric_limits<int>::min());
+		tail = new Node(std::numeric_limits<int>::max());
+		head->next = LF_PTR{ false, tail };
+	}
+
+	// prev , curr
+	pair<Node*, Node*> find(int x) {
+		while (true) {
+		Retry:
+			Node* prev, * curr, * next{};
+			prev = head;
+			curr = prev->next.get_ptr();
+			while (true) {
+				bool removed;
+				next = curr->next.get_ptr_mark(&removed);
+				while (removed) { // 삭제된 노드 curr.
+					if (prev->next.CAS(curr, next, false, false)) {
+						// delete curr;
+					}
+					else goto Retry;
+					curr = next;
+					next = curr->next.get_ptr_mark(&removed);
+				}
+
+				if (x <= curr->value)
+					return make_pair(prev, curr);
+
+				prev = curr;
+				curr = next;
+			}
+		}
+	}
+
+	bool ADD(int x) {
+		while (true) {
+			auto target = find(x);
+			auto prev = target.first;
+			auto curr = target.second;
+			if (curr->value == x)
+				return false;
+			auto node = new Node(x, curr);
+			if (prev->next.CAS(curr, node, false, false))
+				return true;
+			delete node;
+		}
+	}
+
+	bool REMOVE(int x) {
+		while (true) {
+			Node* prev, * curr, * next;
+			auto target = find(x);
+			prev = target.first;
+			curr = target.second;
+
+			if (curr->value != x)
+				return false;
+
+			next = curr->next.get_ptr();
+
+			if (!curr->next.attempt_mark(next, true))
+				continue;
+
+			prev->next.CAS(curr, next, false, false);
+			return true;
+		}
+	}
+
+	bool CONTAINS(int x) {
+		auto curr = head;
+		bool mark;
+		while (curr->value < x) {
+			curr = curr->next.get_ptr_mark(&mark);
+		}
+		return curr->value == x && mark;
+	}
+
+	void print20() {
+		auto node = head->next.get_ptr();
+		for (int i = 0; i < 20; i++) {
+			if (node == tail)break;
+			cout << node->value << " ";
+			node = node->next.get_ptr();
+		}
+		cout << endl;
+	}
+
+	void clear() {
+		auto curr = head->next.get_ptr();
+		while (curr != tail) {
+			auto node = curr;
+			curr = curr->next.get_ptr();
+			delete node;
+		}
+		head->next = LF_PTR{ false, tail };
+	}
+};
+
+
+class LF_SET2 {
 	NODE head, tail;
 public:
-	L_SET()
+	LF_SET2()
 	{
 		head.v = 0x80000000;
 		tail.v = 0x7FFFFFFF;
@@ -433,92 +592,113 @@ public:
 		tail.next = nullptr;
 	}
 
+	pair<NODE*, NODE*> find(int x) {
+		while (true) {
+		Retry:
+			NODE* prev, * curr, * next{};
+			prev = &head;
+			curr = prev->next;
+			while (true) {
+				bool on;
+				auto currInfo = curr->getNextAndOn();
+				next = currInfo.first;
+				on = currInfo.second;
+				while (!on) { // 삭제된 노드 curr.
+					if (CAS::CAS(prev->next, curr, next,
+						prev->on, true, true)) {
+						// delete curr;
+					}
+					else goto Retry;
+					curr = next;
+					currInfo = curr->getNextAndOn();
+					next = currInfo.first;
+					on = currInfo.second;
+				}
+
+				if (x <= curr->v)
+					return make_pair(prev, curr);
+
+				prev = curr;
+				curr = next;
+			}
+		}
+	}
+
 	bool ADD(int x)
 	{
+		NODE* prev, * curr, * node{};
 		while (true) {
-			NODE* prev = &head;
-			NODE* curr = prev->next;
-			while (curr->v < x) {
-				prev = curr;
-				curr = curr->next;
-			}
-			scoped_lock lck{ *prev , *curr };
-			if (!validate(prev, curr)) continue;
-			if (curr->v != x) {
-				NODE* node = new NODE{ x };
-				node->next = curr;
-				prev->next = node;
-				return true;
-			}
-			else
-			{
+			auto target = find(x);
+			prev = target.first;
+			curr = target.second;
+			if (curr->v == x)
 				return false;
-			}
+			node = new NODE(x, curr);
+			if (CAS::CAS(prev->next, curr, node
+				, prev->on, true, true))
+				return true;
 		}
 	}
 
 	bool REMOVE(int x)
 	{
 		while (true) {
-			NODE* prev = &head;
-			NODE* curr = prev->next;
-			while (curr->v < x) {
-				prev = curr;
-				curr = curr->next;
-			}
-			scoped_lock lck{ *prev , *curr };
-			if (!validate(prev, curr)) continue;
-			if (curr->v != x) {
+			NODE* prev, * curr, * next;
+			auto target = find(x);
+			prev = target.first;
+			curr = target.second;
+
+			if (curr->v != x)
 				return false;
-			}
-			else {
-				curr->disable(); // 순서에 따라 
-								 // valid => invalid 오판 :: 허용가능
-								 // invalid => valid 오판 :: 심각한 버그
-				prev->next = curr->next;
-				return true;
-			}
+
+			next = curr->next;
+
+			if (!CAS::CAS(curr->next, next, next
+				, curr->on, true, false))
+				continue;
+
+			CAS::CAS(prev->next, curr, next
+				, prev->on, true, true);
+			return true;
 		}
 	}
 
 	bool CONTAINS(int x)
 	{
-		NODE* curr = &head;
-		while (curr->v < x) curr = curr->next;
-		return curr->v == x && curr->on;
-	}
-
-	bool validate(NODE* prev, NODE* curr)
-	{
-		auto alive = prev->on && curr->on;		// 둘 다 리스트에 존재한다.
-		auto noIntercept = prev->next == curr;	// 중간에 다른 노드가 끼어들지 않았다.
-		return alive && noIntercept;
+		auto curr = &head;
+		auto on = curr->on;
+		while (curr->v < x) {
+			auto target = curr->getNextAndOn();
+			curr = target.first;
+			on = target.second;
+		}
+		return curr->v == x && on;
 	}
 
 	void print20()
 	{
-		NODE* p = head.next;
-		for (int i = 0; i < 20; ++i) {
-			if (p == &tail) break;
-			cout << p->v << ", ";
-			p = p->next;
+		auto node = head.next;
+		for (int i = 0; i < 20; i++) {
+			if (node == &tail)break;
+			cout << node->v << ", ";
+			node = node->next;
 		}
 		cout << endl;
 	}
 
 	void clear()
 	{
-		NODE* p = head.next;
-		while (p != &tail) {
-			NODE* t = p;
-			p = p->next;
-			delete t;
+		auto curr = head.next;
+		while (curr != &tail) {
+			auto node = curr;
+			curr = curr->next;
+			delete node;
 		}
 		head.next = &tail;
 	}
 };
 
-NB_SET my_set;
+LF_SET1 my_set;
 
 class HISTORY {
 public:

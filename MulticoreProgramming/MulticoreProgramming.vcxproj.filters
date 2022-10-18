@@ -58,6 +58,9 @@
     <ClCompile Include="lock_free set 2.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
+    <ClCompile Include="ebr_SET.cpp">
+      <Filter>Tested Case\DataStructure\Set</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Timer.hpp">
