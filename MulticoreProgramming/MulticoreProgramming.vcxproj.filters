@@ -52,7 +52,10 @@
     <ClCompile Include="HistoryChecker.cpp">
       <Filter>Tested Case\HistoryChecker</Filter>
     </ClCompile>
-    <ClCompile Include="safe lazy set.cpp">
+    <ClCompile Include="lock_free set.cpp">
+      <Filter>Tested Case\DataStructure\Set</Filter>
+    </ClCompile>
+    <ClCompile Include="lock_free set 2.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
   </ItemGroup>
