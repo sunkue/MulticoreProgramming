@@ -61,6 +61,9 @@
     <ClCompile Include="ebr_SET.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
+    <ClCompile Include="univ.cpp">
+      <Filter>Tested Case\DataStructure\Set</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Timer.hpp">

@@ -90,8 +90,9 @@ public:
 	NODE(const Invocation& input_invoc) :invoc{ input_invoc } {}
 };
 
+
 class LFUniversal {
-	friend class WFUniversal;
+	friend WFUniversal;
 protected:
 	NODE* head[MAX_THREAD];
 	NODE* tail;
