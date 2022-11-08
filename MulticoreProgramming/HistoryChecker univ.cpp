@@ -6,13 +6,16 @@
 #include <mutex>
 #include <atomic>
 #include <set>
+#include <array>
 
 using namespace std;
 using namespace chrono;
 
-static const auto NUM_TEST = 4000;
+static const auto NUM_TEST = 40000;
 static const auto KEY_RANGE = 1000;
 static const auto MAX_THREAD = 64;
+constexpr int checkerSize = 1000;
+
 static int THREAD_NUM;
 thread_local int thread_id;
 
@@ -72,7 +75,6 @@ public:
 			if (count-- == 0) break;
 			cout << n << ", ";
 		}
-		cout << endl;
 	}
 
 	void clear() {
@@ -252,26 +254,129 @@ void Benchmark(int num_thread, int tid) {
 	}
 }
 
+class HISTORY {
+public:
+	int op;
+	int i_value;
+	bool o_value;
+	HISTORY(int o, int i, bool re) : op(o), i_value(i), o_value(re) {}
+};
+
+void worker(vector<HISTORY>* history, int num_thread, int tid)
+{
+	thread_id = tid;
+	Invocation invoc;
+
+	for (int i = 0; i < NUM_TEST / num_thread; ++i) {
+		switch (rand() % 3) {
+		case 0: invoc.method = M_ADD; break;
+		case 1: invoc.method = M_REMOVE; break;
+		case 2: invoc.method = M_CONTAINS; break;
+		}
+		invoc.input = rand() % KEY_RANGE;
+		my_set.Apply(invoc);
+	}
+}
+void worker_check(vector<HISTORY>* history, int num_thread, int tid)
+{
+	thread_id = tid;
+	Invocation invoc;
+
+	for (int i = 0; i < NUM_TEST / num_thread; ++i) {
+		auto op = rand() % 3;
+		switch (op) {
+		case 0: invoc.method = M_ADD; break;
+		case 1: invoc.method = M_REMOVE; break;
+		case 2: invoc.method = M_CONTAINS; break;
+		}
+		invoc.input = rand() % KEY_RANGE;
+		history->emplace_back(op, invoc.input, my_set.Apply(invoc));
+	}
+}
+void check_history(array <vector <HISTORY>, 16>& history, int num_threads)
+{
+	array <int, checkerSize> survive = {};
+	cout << "Checking Consistency : ";
+	if (history[0].size() == 0) {
+		cout << "No history.\n";
+		return;
+	}
+	for (int i = 0; i < num_threads; ++i) {
+		for (auto& op : history[i]) {
+			if (false == op.o_value) continue;
+			if (op.op == 3) continue;
+			if (op.op == 0) survive[op.i_value]++;
+			if (op.op == 1) survive[op.i_value]--;
+		}
+	}
+	for (int i = 0; i < survive.size(); ++i) {
+		int val = survive[i];
+		Invocation invoc; 
+		invoc.method = M_CONTAINS;
+		invoc.input = i;
+		if (val < 0) {
+			cout << "The value " << i << " removed while it is not in the set.\n";
+			exit(-1);
+		}
+		else if (val > 1) {
+			cout << "The value " << i << " is added while the set already have it.\n";
+			exit(-1);
+		}
+		else if (val == 0) {
+			if (my_set.Apply(invoc)) {
+				cout << "The value " << i << " should not exists.\n";
+				exit(-1);
+			}
+		}
+		else if (val == 1) {
+			if (false == my_set.Apply(invoc)) {
+				cout << "The value " << i << " shoud exists.\n";
+				exit(-1);
+			}
+		}
+	}
+	cout << " OK\n";
+}
 
 int main()
 {
-	vector <thread*> worker_threads;
-	for (int num_thread = 1; num_thread <= 16; num_thread *= 2)
-	{
-		THREAD_NUM = num_thread;
+	cout << "================== WF =====================" << endl;
+	for (int num_threads = 1; num_threads <= 16; num_threads *= 2) {
+		THREAD_NUM = num_threads;
+		vector <thread> threads;
+		array<vector <HISTORY>, 16> history;
 		my_set.clear();
-
-		auto start = high_resolution_clock::now();
-		for (int i = 0; i < num_thread; ++i)
-			worker_threads.push_back(new thread{ Benchmark, num_thread, i + 1 });
-		for (auto pth : worker_threads) pth->join();
-		auto du = high_resolution_clock::now() - start;
-
-		for (auto pth : worker_threads) delete pth;
-		worker_threads.clear();
-
-		cout << num_thread << " Threads   ";
-		cout << duration_cast<milliseconds>(du).count() << "ms \n";
+		auto start_t = high_resolution_clock::now();
+		for (int i = 0; i < num_threads; ++i)
+			threads.emplace_back(worker_check, &history[i], num_threads, i);
+		for (auto& th : threads)
+			th.join();
+		auto end_t = high_resolution_clock::now();
+		auto exec_t = end_t - start_t;
+		auto exec_ms = duration_cast<milliseconds>(exec_t).count();
+		cout << num_threads << "Threads.  Exec Time : " << exec_ms <<"::";
 		my_set.Print20();
+		check_history(history, num_threads);
 	}
+
+	for (int num_threads = 1; num_threads <= 16; num_threads *= 2) {
+		THREAD_NUM = num_threads;
+		vector <thread> threads;
+		array<vector <HISTORY>, 16> history;
+		my_set.clear();
+		auto start_t = high_resolution_clock::now();
+		for (int i = 0; i < num_threads; ++i)
+			threads.emplace_back(worker, &history[i], num_threads, i);
+		for (auto& th : threads)
+			th.join();
+		auto end_t = high_resolution_clock::now();
+		auto exec_t = end_t - start_t;
+		auto exec_ms = duration_cast<milliseconds>(exec_t).count();
+		cout << num_threads << "Threads.  Exec Time : " << exec_ms << "::";
+		my_set.Print20();
+		check_history(history, num_threads);
+	}
+
+	int i;
+	cin >> i;
 }
