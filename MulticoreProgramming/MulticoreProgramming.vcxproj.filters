@@ -70,11 +70,14 @@
     <ClCompile Include="HistoryChecker univ set.cpp">
       <Filter>Tested Case\DataStructure\Set\HistoryChecker</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
-      <Filter>Main</Filter>
-    </ClCompile>
     <ClCompile Include="coarse_grained queue.cpp">
       <Filter>Tested Case\DataStructure\Queue</Filter>
+    </ClCompile>
+    <ClCompile Include="lock_free queue.cpp">
+      <Filter>Tested Case\DataStructure\Queue</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Main</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

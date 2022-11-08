@@ -13,7 +13,6 @@
 using namespace std;
 
 static const auto NUM_TEST = 1000'0000;
-static const auto KEY_RANGE = 1000;
 static const auto MAX_THREAD = 16;
 
 struct Node {
@@ -44,7 +43,7 @@ public:
 		auto ret = head->next->value;
 		auto tmp = head;
 		head = head->next;
-		//delete tmp;
+		delete tmp;
 		return ret;
 	}
 

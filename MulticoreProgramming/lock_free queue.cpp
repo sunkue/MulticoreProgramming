@@ -9,6 +9,7 @@
 #include <ranges>
 #include <random>
 #include "Timer.hpp"
+#include "CAS.hpp"
 
 using namespace std;
 
@@ -21,30 +22,46 @@ struct Node {
 	Node* next{};
 };
 
-class QUEUE {
-	Node* head{}, * tail{};
-	mutex m;
+class LF_QUEUE {
+	Node* volatile head{},
+		* volatile tail{};
 public:
-	QUEUE() {
+	LF_QUEUE() {
 		head = tail = new Node{ -1 };
 	}
 
 	void enq(int x) {
 		auto node = new Node(x);
-		lock_guard lck{ m };
-		tail->next = node;
-		tail = node;
+		while (true) {
+			auto last = tail;
+			auto next = last->next;
+			if (last != tail)continue;
+			if (nullptr == next) {
+				if (CAS::CAS(last->next, {nullptr}, node)) {
+					CAS::CAS(tail, last, node);
+					return;
+				}
+			}
+			else CAS::CAS(tail, last, next);
+		}
 	}
 
 	int deq() {
-		lock_guard lck{ m };
-		if (nullptr == head->next)
-			return -1;
-		auto ret = head->next->value;
-		auto tmp = head;
-		head = head->next;
-		delete tmp;
-		return ret;
+		while (true) {
+			auto first = head;
+			auto last = tail;
+			auto next = first->next;
+			if (first != head) continue;
+			if (nullptr == next) return -1;
+			if (first == last) {
+				CAS::CAS(tail, last, next);
+				continue;
+			}
+			auto ret = next->value;
+			if (!CAS::CAS(head, first, next)) continue;
+			delete first;
+			return ret;
+		}
 	}
 
 	void show() {
@@ -68,7 +85,7 @@ public:
 	}
 };
 
-QUEUE q;
+LF_QUEUE q;
 
 void Benchmark(int threadNum) {
 	for (int i = 0; i < NUM_TEST / threadNum; i++) {
@@ -95,7 +112,7 @@ int main()
 		}
 	};
 
-	cout << "=========== coarse_grained 성긴동기화 ===========" << endl;
+	cout << "=========== LF 무잠금 (가끔 크래시) ===========" << endl;
 	DoJob();
 }
 
