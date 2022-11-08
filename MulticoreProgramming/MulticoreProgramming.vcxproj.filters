@@ -20,8 +20,14 @@
     <Filter Include="Tested Case\DataStructure\Set">
       <UniqueIdentifier>{9dee9188-78f7-4b42-ba98-96c1ff30d0d6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Tested Case\HistoryChecker">
+    <Filter Include="Tested Case\DataStructure\Queue">
+      <UniqueIdentifier>{993f3387-7ae5-45a8-9d95-af125b9a9c68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tested Case\DataStructure\Set\HistoryChecker">
       <UniqueIdentifier>{9d2ce8e0-fd40-4623-b0fd-6354f597e5d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tested Case\DataStructure\Queue\HistoryChecker">
+      <UniqueIdentifier>{0b53f3a7-cc96-478b-90c4-c4a97c7243b8}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -46,8 +52,8 @@
     <ClCompile Include="lazy set.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
-    <ClCompile Include="HistoryChecker.cpp">
-      <Filter>Tested Case\HistoryChecker</Filter>
+    <ClCompile Include="HistoryChecker set.cpp">
+      <Filter>Tested Case\DataStructure\Set\HistoryChecker</Filter>
     </ClCompile>
     <ClCompile Include="lock_free set.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
@@ -55,17 +61,20 @@
     <ClCompile Include="lock_free set 2.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
-    <ClCompile Include="ebr_SET.cpp">
+    <ClCompile Include="ebr set.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
-    <ClCompile Include="univ.cpp">
+    <ClCompile Include="univ set.cpp">
       <Filter>Tested Case\DataStructure\Set</Filter>
     </ClCompile>
-    <ClCompile Include="HistoryChecker univ.cpp">
-      <Filter>Tested Case\HistoryChecker</Filter>
+    <ClCompile Include="HistoryChecker univ set.cpp">
+      <Filter>Tested Case\DataStructure\Set\HistoryChecker</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="coarse_grained queue.cpp">
+      <Filter>Tested Case\DataStructure\Queue</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
