@@ -79,6 +79,9 @@
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="stamp queue.cpp">
+      <Filter>Tested Case\DataStructure\Queue</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Timer.hpp">

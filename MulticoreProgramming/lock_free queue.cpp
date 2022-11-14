@@ -26,9 +26,7 @@ class LF_QUEUE {
 	Node* volatile head{},
 		* volatile tail{};
 public:
-	LF_QUEUE() {
-		head = tail = new Node{ -1 };
-	}
+	LF_QUEUE() { reset(); }
 
 	void enq(int x) {
 		auto node = new Node(x);
@@ -37,7 +35,7 @@ public:
 			auto next = last->next;
 			if (last != tail)continue;
 			if (nullptr == next) {
-				if (CAS::CAS(last->next, {nullptr}, node)) {
+				if (CAS::CAS(last->next, { nullptr }, node)) {
 					CAS::CAS(tail, last, node);
 					return;
 				}

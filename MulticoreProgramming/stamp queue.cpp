@@ -14,37 +14,28 @@
 using namespace std;
 
 static const auto NUM_TEST = 1000'0000;
-static const auto MAX_THREAD = 16;
+static const auto MAX_THREAD = 64;
 
-template<class _Ty, class _Stamp = size_t>
-class StampedPtr {
+class StampPtr : public CAS::TaggedPointerSuper<class Node> {
 public:
-	using Ptr = _Ty*;
-	using Stamp = _Stamp;
-private:
-	Ptr ptr;
-	Stamp stamp;
-public:
-	StampedPtr(Ptr ptr = nullptr, Stamp stamp = 0) :ptr(ptr), stamp(stamp) {};
-	void set(Ptr n) { ptr = p; stamp++; }
-	Ptr getPtr()const { return ptr; }
-	Stamp getStamp()const { return stamp; }
+	StampPtr(Ptr ptr = nullptr, Tag tag = 0)
+		:CAS::TaggedPointerSuper<class Node>{ ptr , tag } {};
+
+	void set(Node* n) {
+		taggedPtr = reinterpret_cast<SuperLine>(n) << 32 | 1;
+	}
 };
 
 struct Node {
 	Node(int v) :value{ v } {}
 	int value{};
-	StampedPtr<Node> next{};
+	StampPtr next{};
 };
 
 class STAMP_QUEUE {
-	StampedPtr<Node> head{}, tail{};
+	StampPtr head{}, tail{};
 public:
-	STAMP_QUEUE() {
-		auto g = new Node{ -1 };
-		head.set(g);
-		tail.set(g);
-	}
+	STAMP_QUEUE() { reset(); }
 
 	void enq(int x) {
 		auto node = new Node(x);
@@ -53,15 +44,15 @@ public:
 			auto next = last.getPtr()->next;
 			if (last != tail)continue;
 			if (nullptr == next.getPtr()) {
-				if (last.getPtr()->next.CAS({ nullptr }, node
-					, next.getTag(), next.getTag() + 1)) {
-					tail.CAS(last.getPtr(), node
-						, last.getTag(), last.getTag() + 1);
+				if (last.getPtr()->next.CAS({ nullptr }, node,
+					next.getTag(), next.getTag() + 1)) {
+					tail.CAS(last.getPtr(), node,
+						last.getTag(), last.getTag() + 1);
 					return;
 				}
 			}
-			else tail.CAS(last.getPtr(), next.getPtr()
-				, last.getTag(), last.getTag() + 1);
+			else tail.CAS(last.getPtr(), next.getPtr(),
+				last.getTag(), last.getTag() + 1);
 		}
 	}
 
@@ -71,7 +62,7 @@ public:
 			auto last = tail;
 			auto next = first.getPtr()->next;
 			if (first != head) continue;
-			if (nullptr == next) return -1;
+			if (nullptr == next.getPtr()) return -1;
 			if (first == last) {
 				tail.CAS(last.getPtr(), next.getPtr(),
 					last.getTag(), last.getTag() + 1);
@@ -102,7 +93,9 @@ public:
 			p = tmp->next;
 			delete tmp;
 		}
-		head = tail = new Node{ -1 };
+		auto g = new Node{ -1 };
+		head.set(g);
+		tail.set(g);
 	}
 };
 
@@ -142,3 +135,5 @@ int main()
 	cout << "=========== STAMP ===========" << endl;
 	DoJob();
 }
+
+
