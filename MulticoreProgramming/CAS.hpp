@@ -1,6 +1,5 @@
 #pragma once
 #include <atomic>
-#include <bitset>
 
 namespace CAS {
 	template <class T> struct is_atomicable : std::bool_constant<std::atomic<T>::is_always_lock_free> {};
@@ -103,8 +102,7 @@ namespace CAS {
 		}
 	};
 
-#ifdef _WIN64
-#else 
+#ifndef _WIN64
 	template<class _Ty, class _TagTy = size_t>
 	class TaggedPointerSuper {
 	public:
@@ -146,5 +144,7 @@ namespace CAS {
 			return CAS(ptr, ptr, getTag(), tag);
 		}
 	};
-}
 #endif // _WIN64
+
+
+}

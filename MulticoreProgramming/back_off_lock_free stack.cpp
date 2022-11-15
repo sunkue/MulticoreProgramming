@@ -40,7 +40,7 @@ struct Node {
 
 class STACK {
 	Node* volatile top{};
-	inline static thread_local BackOff backoff{ 1, 1'000 * rand()};
+	inline static thread_local BackOff backoff{ 1, 1'000 * rand() };
 public:
 	STACK() { reset(); }
 
@@ -119,7 +119,7 @@ int main()
 		}
 	};
 
-	cout << "===========  Back Off Lock Free Stack ===========" << endl;
+	cout << "=========== Back Off Lock Free Stack ===========" << endl;
 	DoJob();
 }
 

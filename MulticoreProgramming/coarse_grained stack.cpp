@@ -13,57 +13,37 @@
 
 using namespace std;
 
-static const auto NUM_TEST = 4000'0000;
+static const auto NUM_TEST = 100'0000;
 static const auto MAX_THREAD = 16;
 
-class BackOff {
-	int minDelay, maxDelay;
-	int limit;
-public:
-	BackOff(int min, int max)
-		: minDelay(min), maxDelay(max), limit(min) {}
-
-	void InterruptedException() {
-		int delay = 0;
-		if (limit != 0) delay = rand() % limit;
-		limit *= 2;
-		if (limit > maxDelay) limit = maxDelay;
-		this_thread::sleep_for(chrono::microseconds(delay));
-	}
-};
 
 struct Node {
 	Node(int v) :value{ v } {}
 	int value{};
-	Node* next{};
+	Node* volatile next{};
 };
 
 class STACK {
 	Node* volatile top{};
-	inline static thread_local BackOff backoff{ 1, 1'000 * rand()};
+	mutex m;
 public:
 	STACK() { reset(); }
 
 	void push(int x) {
 		auto node = new Node(x);
-		while (true) {
-			node->next = top;
-			if (CAS::CAS(top, node->next, node))return;
-			backoff.InterruptedException();
-		}
+		lock_guard lck{ m };
+		node->next = top;
+		top = node;
 	}
 
 	int pop() {
-		while (true) {
-			auto node = top;
-			if (nullptr == node) return -2;
-			int value = node->value;
-			if (CAS::CAS(top, node, node->next)) {
-				//delete node;
-				return value;
-			}
-			backoff.InterruptedException();
-		}
+		lock_guard lck{ m };
+		if (nullptr == top) return -2;
+		int value = top->value;
+		auto node = top;
+		top = top->next;
+		delete node;
+		return value;
 	}
 
 	void show() {
@@ -119,7 +99,7 @@ int main()
 		}
 	};
 
-	cout << "===========  Back Off Lock Free Stack ===========" << endl;
+	cout << "=========== 성긴동기화 Stack ===========" << endl;
 	DoJob();
 }
 

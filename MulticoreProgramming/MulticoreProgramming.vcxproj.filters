@@ -29,6 +29,9 @@
     <Filter Include="Tested Case\DataStructure\Queue\HistoryChecker">
       <UniqueIdentifier>{0b53f3a7-cc96-478b-90c4-c4a97c7243b8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tested Case\DataStructure\Stack">
+      <UniqueIdentifier>{f099cc42-4351-4f71-850f-2273dbf5ea99}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Peterson.cpp">
@@ -81,6 +84,18 @@
     </ClCompile>
     <ClCompile Include="stamp queue.cpp">
       <Filter>Tested Case\DataStructure\Queue</Filter>
+    </ClCompile>
+    <ClCompile Include="ebr_lf_queue.cpp">
+      <Filter>Tested Case\DataStructure\Queue</Filter>
+    </ClCompile>
+    <ClCompile Include="coarse_grained stack.cpp">
+      <Filter>Tested Case\DataStructure\Stack</Filter>
+    </ClCompile>
+    <ClCompile Include="lock_free stack.cpp">
+      <Filter>Tested Case\DataStructure\Stack</Filter>
+    </ClCompile>
+    <ClCompile Include="back_off_lock_free stack.cpp">
+      <Filter>Tested Case\DataStructure\Stack</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
