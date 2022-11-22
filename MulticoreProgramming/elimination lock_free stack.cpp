@@ -16,7 +16,7 @@ using namespace std;
 constexpr auto NUM_TEST = 4000'0000;
 constexpr auto MAX_THREAD = 16;
 
-constexpr int TIMELIMIT = 10000; //실험필요
+constexpr int TIMELIMIT = 10000;
 
 constexpr int EMPTY = 0;
 constexpr int WAITTING = 1;
@@ -26,21 +26,24 @@ constexpr int POP = -1;
 constexpr int TIMEOUT = -2;
 
 int numOfThread = 1;
+int succeed = 0;
 
 class Exchanger {
 	atomic_int value{};
 public:
+	void clear() { value = 0; }
 	int exchange(int x, bool& busy) {
 		for (int i = 0; i < TIMELIMIT; i++) {
 			int c_value = value;
-			int state = value >> 30;
+			int state = value >> 29;
 			switch (state) {
 			case EMPTY: {
-				int n_value = (WAITTING << 30) | x;
+				int n_value = (WAITTING << 29) | x;
 				if (CAS::CAS(value, c_value, n_value)) {
 					bool success = false;
 					for (int i = 0; i < TIMELIMIT; i++) {
-						if (BUSY == (value >> 30)) {
+						if (BUSY == (value >> 29)) {
+							succeed++;
 							success = true;
 							break;
 						}
@@ -53,7 +56,7 @@ public:
 				}
 			} break;
 			case WAITTING: {
-				int n_value = (BUSY << 30) | x;
+				int n_value = (BUSY << 29) | x;
 				if (CAS::CAS(value, c_value, n_value)) {
 					return c_value & 0x3FFFFFFFF;
 				}
@@ -69,6 +72,7 @@ class EliminationArray {
 	int range{ 1 };
 	std::array<Exchanger, MAX_THREAD> exchangers;
 public:
+	void clear() { for (auto& e : exchangers)e.clear(); }
 	int visit(int value) {
 		int slot = rand() % range;
 		bool busy = false;
@@ -133,6 +137,7 @@ public:
 			delete tmp;
 		}
 		top = nullptr;
+		el.clear();
 	}
 };
 
@@ -161,10 +166,11 @@ int main()
 			st.reset();
 			timer::reset();
 			numOfThread = threadNum;
+			succeed = 0;
 			vector<thread> threadPool; threadPool.reserve(threadNum);
 			for (int i = 0; i < threadNum; i++) threadPool.push_back(move(thread(Benchmark)));
 			for (auto& t : threadPool) t.join();
-			timer::elapsed("[" + to_string(threadNum) + " Threads] [", "]\t");
+			timer::elapsed("[" + to_string(threadNum) + " Threads] (s::" + to_string(succeed) + ") [", "]\t");
 			st.show();
 		}
 	};
