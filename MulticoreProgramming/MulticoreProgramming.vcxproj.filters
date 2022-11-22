@@ -97,6 +97,9 @@
     <ClCompile Include="back_off_lock_free stack.cpp">
       <Filter>Tested Case\DataStructure\Stack</Filter>
     </ClCompile>
+    <ClCompile Include="elimination lock_free stack.cpp">
+      <Filter>Tested Case\DataStructure\Stack</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Timer.hpp">
