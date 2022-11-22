@@ -16,7 +16,7 @@ using namespace std;
 constexpr auto NUM_TEST = 4000'0000;
 constexpr auto MAX_THREAD = 16;
 
-constexpr int TIMELIMIT = 10000;
+constexpr int TIMELIMIT = 10000; //실험필요
 
 constexpr int EMPTY = 0;
 constexpr int WAITTING = 1;
@@ -46,7 +46,7 @@ public:
 						}
 					}
 					if (!success)
-						if (CAS::CAS(value, n_value, 0)) return TIMEOUT;
+						if (CAS::CAS(value, n_value, 0)) return POP;
 					int ret = value & 0x3FFFFFFFF;
 					value = 0;
 					return ret;
