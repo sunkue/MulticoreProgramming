@@ -32,6 +32,12 @@
     <Filter Include="Tested Case\DataStructure\Stack">
       <UniqueIdentifier>{f099cc42-4351-4f71-850f-2273dbf5ea99}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tested Case\DataStructure\SkipList %28Set%29">
+      <UniqueIdentifier>{64a61afc-8aff-444f-a14b-690572c6a6da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tested Case\DataStructure\SkipList %28Set%29\HistoryChecker">
+      <UniqueIdentifier>{14a90870-07f6-47ba-956a-689e3d4d9e63}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Peterson.cpp">
@@ -99,6 +105,12 @@
     </ClCompile>
     <ClCompile Include="elimination lock_free stack.cpp">
       <Filter>Tested Case\DataStructure\Stack</Filter>
+    </ClCompile>
+    <ClCompile Include="coarse_grained skip_list.cpp">
+      <Filter>Tested Case\DataStructure\SkipList %28Set%29</Filter>
+    </ClCompile>
+    <ClCompile Include="HistoryChecker skip_list.cpp">
+      <Filter>Tested Case\DataStructure\SkipList %28Set%29\HistoryChecker</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
