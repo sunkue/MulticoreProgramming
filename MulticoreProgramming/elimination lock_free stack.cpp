@@ -16,7 +16,7 @@ using namespace std;
 constexpr auto NUM_TEST = 4000'0000;
 constexpr auto MAX_THREAD = 16;
 
-constexpr int TIMELIMIT = 10000;
+constexpr int TIMELIMIT = 3000;
 
 constexpr int EMPTY = 0;
 constexpr int WAITTING = 1;
@@ -26,7 +26,8 @@ constexpr int POP = -1;
 constexpr int TIMEOUT = -2;
 
 int numOfThread = 1;
-int succeed = 0;
+thread_local int succeed = 0;
+int succeedSum = 0;
 
 class Exchanger {
 	atomic_int value{};
@@ -43,13 +44,12 @@ public:
 					bool success = false;
 					for (int i = 0; i < TIMELIMIT; i++) {
 						if (BUSY == (value >> 29)) {
-							succeed++;
 							success = true;
 							break;
 						}
 					}
 					if (!success)
-						if (CAS::CAS(value, n_value, 0)) return POP;
+						if (CAS::CAS(value, n_value, 0)) return TIMEOUT;
 					int ret = value & 0x3FFFFFFFF;
 					value = 0;
 					return ret;
@@ -57,9 +57,8 @@ public:
 			} break;
 			case WAITTING: {
 				int n_value = (BUSY << 29) | x;
-				if (CAS::CAS(value, c_value, n_value)) {
+				if (CAS::CAS(value, c_value, n_value))
 					return c_value & 0x3FFFFFFFF;
-				}
 			}break;
 			case BUSY: { busy = true; }break;
 			}
@@ -116,6 +115,11 @@ public:
 				//delete node;
 				return value;
 			}
+			auto ret = el.visit(POP);
+			if (0 <= ret) {
+				succeed++;
+				return ret;
+			}
 		}
 	}
 
@@ -157,6 +161,7 @@ void Benchmark() {
 	catch (std::exception& e) {
 		std::cout << e.what() << std::endl;
 	}
+	succeedSum += succeed;
 }
 
 int main()
@@ -170,7 +175,7 @@ int main()
 			vector<thread> threadPool; threadPool.reserve(threadNum);
 			for (int i = 0; i < threadNum; i++) threadPool.push_back(move(thread(Benchmark)));
 			for (auto& t : threadPool) t.join();
-			timer::elapsed("[" + to_string(threadNum) + " Threads] (s::" + to_string(succeed) + ") [", "]\t");
+			timer::elapsed("[" + to_string(threadNum) + " Threads] (s::" + to_string(succeedSum) + ") [", "]\t");
 			st.show();
 		}
 	};
