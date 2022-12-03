@@ -13,7 +13,7 @@ constexpr int operationNum = 400'0000;
 constexpr int range = 1000;
 constexpr int checkerSize = range;
 
-namespace SKIP {
+namespace C_SL {
 	constexpr auto MAX_LEVEL = 3;
 	struct Node {
 		Node(int v, int top) :value{ v }, topLvl{ top }{}
@@ -106,7 +106,152 @@ namespace SKIP {
 	};
 }
 
-SKIP::SKIP_LIST my_set;
+namespace L_SL {
+	constexpr auto MAX_LEVEL = 3;
+
+	struct Node {
+		Node(int v, int top) :value{ v }, topLvl{ top }{}
+		int value{};
+		Node* volatile next[MAX_LEVEL + 1]{ nullptr };
+		int topLvl{};
+		bool onRemove{ false };
+		bool fullyLinked{ false };
+		void lock() { m.lock(); }
+		void unlock() { m.unlock(); }
+		bool try_lock() { return m.try_lock(); }
+	private:
+		recursive_mutex m;
+	};
+
+	class SKIP_LIST {
+		Node* volatile head{};
+		Node* volatile tail{};
+
+		inline static thread_local Node* volatile prevs[MAX_LEVEL + 1];
+		inline static thread_local Node* volatile currs[MAX_LEVEL + 1];
+
+	public:
+		SKIP_LIST() { reset(); }
+
+		bool add(int x) {
+			while (true) {
+				auto foundLvl = find(x, prevs, currs);
+				if (foundLvl != -1) {
+					auto node = currs[foundLvl];
+					if (node->onRemove)continue;
+					while (!node->fullyLinked)
+						;;;
+					return false;
+				}
+				int topLocked = -1;
+				int topLvl = 0;
+				for (int i = 0; i < MAX_LEVEL; i++) {
+					if (rand() % 2) break;
+					topLvl++;
+				}
+				bool valid = true;
+				std::array<std::optional<std::lock_guard<Node>>, MAX_LEVEL + 1> lcks;
+				for (int lvl = 0; valid && (lvl <= topLvl); lvl++) {
+					auto prev = prevs[lvl];
+					auto curr = currs[lvl];
+					lcks[lvl].emplace(*prev);
+					topLocked = lvl;
+					valid = !prev->onRemove && !curr->onRemove && prev->next[lvl] == curr;
+				}
+				if (!valid)  continue;
+				auto node = new Node(x, topLvl);
+				for (int lvl = 0; lvl <= topLvl; lvl++)
+					node->next[lvl] = currs[lvl];
+				for (int lvl = 0; lvl <= topLvl; lvl++)
+					prevs[lvl]->next[lvl] = node;
+				node->fullyLinked = true;
+				return true;
+			}
+		}
+
+		bool remove(int x) {
+			// ¹Ì¿Ï¼º..
+			Node* victim{};
+			bool isOnRemove{};
+			int topLvl = -1;
+			while (true) {
+				int foundLvl = find(x, prevs, currs);
+				if (foundLvl != -1)victim = currs[foundLvl];
+				if (isOnRemove || (victim && victim->topLvl == foundLvl && !victim->onRemove)) {
+					std::optional<std::lock_guard<Node>> victimLck;
+					if (!isOnRemove) {
+						topLvl = victim->topLvl;
+						victimLck.emplace(*victim);
+						if (victim->onRemove) return false;
+						victim->onRemove = true;
+						isOnRemove = true;
+					}
+					int topLocked = -1;
+					bool valid = true;
+					std::array<std::optional<std::lock_guard<Node>>, MAX_LEVEL + 1> lcks;
+					for (int lvl = 0; valid && lvl <= topLvl; lvl++) {
+						auto prev = prevs[lvl];
+						lcks[lvl].emplace(*prev);
+						topLocked = lvl;
+						valid = !prev->onRemove && prev->next[lvl] == victim;
+					}
+					if (!valid) continue;
+					for (int lvl = topLvl; 0 <= lvl; lvl--)
+						prevs[lvl]->next[lvl] = victim->next[lvl];
+					return true;
+				}
+				return false;
+			}
+		}
+
+		bool contains(int x) {
+			int foundLvl = find(x, prevs, currs);
+			return foundLvl != -1 && currs[foundLvl]->fullyLinked && !currs[foundLvl]->onRemove;
+		}
+
+		int find(int x, Node* volatile prevs[], Node* volatile currs[]) {
+			int foundLvl = -1;
+			auto prev = head;
+			for (int cl = MAX_LEVEL; 0 <= cl; cl--) {
+				auto curr = prev->next[cl];
+				while (curr->value < x) {
+					prev = curr;
+					curr = prev->next[cl];
+				}
+				if (foundLvl == -1 && curr->value == x)
+					foundLvl = cl;
+				prevs[cl] = prev;
+				currs[cl] = curr;
+			}
+			return foundLvl;
+		}
+
+		void show() {
+			auto node = head->next[0];
+			for (int i = 0; i < 20; i++) {
+				if (node == nullptr)break;
+				cout << node->value << " ";
+				node = node->next[0];
+			}
+			cout << endl;
+		}
+
+		void reset() {
+			auto node = head;
+			while (node) {
+				auto tmp = node;
+				node = node->next[0];
+				delete tmp;
+			}
+			head = new Node(std::numeric_limits<int>::min(), MAX_LEVEL);
+			tail = new Node(std::numeric_limits<int>::max(), MAX_LEVEL);
+			for (int i = 0; i < MAX_LEVEL + 1; i++)
+				head->next[i] = tail;
+		}
+	};
+}
+
+L_SL::SKIP_LIST my_set;
 
 class HISTORY {
 public:

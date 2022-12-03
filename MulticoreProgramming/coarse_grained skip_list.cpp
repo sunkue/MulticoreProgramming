@@ -25,7 +25,6 @@ struct Node {
 	int value{};
 	Node* volatile next[MAX_LEVEL + 1]{ nullptr };
 	int topLvl{};
-	bool removed{ false };
 };
 
 class SKIP_LIST {
@@ -66,15 +65,14 @@ public:
 		for (int i = target->topLvl; 0 <= i; --i) {
 			prevs[i]->next[i] = target->next[i];
 		}
-		target->removed = true;
-		//		delete target;
+		delete target;
 		return true;
 	}
 
 	bool contains(int x) {
 		std::lock_guard lck{ m };
 		find(x, prevs, currs);
-		return currs[0]->value == x && !currs[0]->removed;
+		return currs[0]->value == x;
 	}
 
 	void find(int x, Node* prevs[], Node* currs[]) {
@@ -152,7 +150,7 @@ int main()
 		}
 	};
 
-	cout << "=========== CoarseGrained Skip List ===========" << endl;
+	cout << "=========== CoarseGrained Skip List Set ===========" << endl;
 	DoJob();
 }
 

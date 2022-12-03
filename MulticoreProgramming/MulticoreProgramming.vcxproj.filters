@@ -112,6 +112,9 @@
     <ClCompile Include="HistoryChecker skip_list.cpp">
       <Filter>Tested Case\DataStructure\SkipList %28Set%29\HistoryChecker</Filter>
     </ClCompile>
+    <ClCompile Include="lazy skip_list.cpp">
+      <Filter>Tested Case\DataStructure\SkipList %28Set%29</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Timer.hpp">
