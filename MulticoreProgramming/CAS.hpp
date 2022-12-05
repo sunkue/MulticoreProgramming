@@ -73,7 +73,7 @@ namespace CAS {
 
 		std::pair<Ptr, Tag> getPtrTag()const {
 			auto snapshot = taggedPtr;
-			auto ptr = reinterpret_cast<Ptr>(snapshot) & PTR_MASK;
+			auto ptr = reinterpret_cast<Ptr>(snapshot & PTR_MASK);
 			auto tag = (snapshot & TAG_MASK);
 			return std::make_pair(ptr, tag);
 		}

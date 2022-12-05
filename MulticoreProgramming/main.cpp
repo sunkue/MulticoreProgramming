@@ -21,16 +21,9 @@ int numOfThread = 1;
 
 struct Node {
 	Node(int v, int top) :value{ v }, topLvl{ top }{}
+	CAS::TaggedPointer<Node> next[MAX_LEVEL + 1]{};
 	int value{};
-	Node* volatile next[MAX_LEVEL + 1]{ nullptr };
 	int topLvl{};
-	bool onRemove{ false };
-	bool fullyLinked{ false };
-	void lock() { m.lock(); }
-	void unlock() { m.unlock(); }
-	bool try_lock() { return m.try_lock(); }
-private:
-	recursive_mutex m;
 };
 
 class SKIP_LIST {
@@ -44,103 +37,89 @@ public:
 	SKIP_LIST() { reset(); }
 
 	bool add(int x) {
+		int topLvl = 0;
+		for (int i = 0; i < MAX_LEVEL; i++) {
+			if (rand() % 2) break;
+			topLvl++;
+		}
+
 		while (true) {
-			auto foundLvl = find(x, prevs, currs);
-			if (foundLvl != -1) {
-				auto node = currs[foundLvl];
-				if (node->onRemove)continue;
-				while (!node->fullyLinked)
-					;;;
-				return false;
-			}
-			int topLocked = -1;
-			int topLvl = 0;
-			for (int i = 0; i < MAX_LEVEL; i++) {
-				if (rand() % 2) break;
-				topLvl++;
-			}
-			bool valid = true;
-			std::array<std::optional<std::lock_guard<Node>>, MAX_LEVEL + 1> lcks;
-			for (int lvl = 0; valid && (lvl <= topLvl); lvl++) {
-				auto prev = prevs[lvl];
-				auto curr = currs[lvl];
-				lcks[lvl].emplace(*prev);
-				topLocked = lvl;
-				valid = !prev->onRemove && !curr->onRemove && prev->next[lvl] == curr;
-			}
-			if (!valid)  continue;
+			if (find(x, prevs, currs)) return false;
 			auto node = new Node(x, topLvl);
 			for (int lvl = 0; lvl <= topLvl; lvl++)
-				node->next[lvl] = currs[lvl];
-			for (int lvl = 0; lvl <= topLvl; lvl++)
-				prevs[lvl]->next[lvl] = node;
-			node->fullyLinked = true;
+				node->next[lvl] = CAS::TaggedPointer<Node>(currs[lvl], false);
+
+			if (!prevs[0]->next[0].CAS(currs[0], node, false, false)) 
+				continue;
+
+			for (int lvl = 1; lvl <= topLvl; lvl++) {
+				while (!prevs[lvl]->next[lvl].CAS(currs[lvl], node, false, false)) {
+					find(x, prevs, currs);
+				}
+			}
+
 			return true;
 		}
 	}
 
 	bool remove(int x) {
-		Node* victim{};
-		bool isOnRemove{};
-		int topLvl = -1;
 		while (true) {
-			int foundLvl = find(x, prevs, currs);
-			if (foundLvl != -1)victim = currs[foundLvl];
-			if (isOnRemove || (victim && victim->topLvl == foundLvl && !victim->onRemove)) {
-				std::optional<std::lock_guard<Node>> victimLck;
-				if (!isOnRemove) {
-					topLvl = victim->topLvl;
-					victimLck.emplace(*victim);
-					if (victim->onRemove) return false;
-					victim->onRemove = true;
-					isOnRemove = true;
+			if (!find(x, prevs, currs)) return false;
+			auto taget = currs[0];
+			bool failed = false;
+			for (int lvl = currs[0]->topLvl; 1 <= lvl; lvl--) {
+				if (!prevs[lvl]->next[lvl].CAS(currs[lvl], currs[lvl], false, true)) {
+					failed = true;
+					break;
 				}
-				int topLocked = -1;
-				bool valid = true;
-				std::array<std::optional<std::lock_guard<Node>>, MAX_LEVEL + 1> lcks;
-				for (int lvl = 0; valid && lvl <= topLvl; lvl++) {
-					auto prev = prevs[lvl];
-					lcks[lvl].emplace(*prev);
-					topLocked = lvl;
-					valid = !prev->onRemove && prev->next[lvl] == victim;
-				}
-				if (!valid) continue;
-				for (int lvl = topLvl; 0 <= lvl; lvl--)
-					prevs[lvl]->next[lvl] = victim->next[lvl];
-				return true;
 			}
-			return false;
+
+			if (failed)continue;
+
+			if (prevs[0]->next[0].CAS(currs[0], currs[0], false, true))
+				continue;
+
+			find(x, prevs, currs);
+			return true;
 		}
 	}
 
 	bool contains(int x) {
-		int foundLvl = find(x, prevs, currs);
-		return foundLvl != -1 && currs[foundLvl]->fullyLinked && !currs[foundLvl]->onRemove;
+		return find(x, prevs, currs);
 	}
 
-	int find(int x, Node* volatile prevs[], Node* volatile currs[]) {
-		int foundLvl = -1;
-		auto prev = head;
-		for (int cl = MAX_LEVEL; 0 <= cl; cl--) {
-			auto curr = prev->next[cl];
-			while (curr->value < x) {
-				prev = curr;
-				curr = prev->next[cl];
+	bool find(int x, Node* volatile prevs[], Node* volatile currs[]) {
+		Node* prev, * curr, * next;
+		bool tag{ false };
+	retry:
+		while (true) {
+			prev = head;
+			for (int cl = MAX_LEVEL; 0 <= cl; cl--) {
+				curr = prev->next[cl].getPtr();
+				while (true) {
+					std::tie(next, tag) = curr->next[cl].getPtrTag();
+					while (tag) {
+						if (!prev->next[cl].CAS(curr, next, false, false)) 
+							goto retry;
+						curr = prev->next[cl].getPtr();
+					std:tie(next, tag) = curr->next[cl].getPtrTag();
+					}
+					if (curr->value < x) { prev = curr; curr = next; }
+					else break;
+				}
+				prevs[cl] = prev;
+				currs[cl] = curr;
 			}
-			if (foundLvl == -1 && curr->value == x)
-				foundLvl = cl;
-			prevs[cl] = prev;
-			currs[cl] = curr;
 		}
-		return foundLvl;
+		return curr->value == x;
 	}
 
 	void show() {
 		auto node = head->next[0];
 		for (int i = 0; i < 20; i++) {
 			if (node == nullptr)break;
-			cout << node->value << " ";
-			node = node->next[0];
+			cout << node.getPtr()->value << " ";
+			node = node.getPtr()->next[0];
 		}
 		cout << endl;
 	}
@@ -149,7 +128,7 @@ public:
 		auto node = head;
 		while (node) {
 			auto tmp = node;
-			node = node->next[0];
+			node = node->next[0].getPtr();
 			delete tmp;
 		}
 		head = new Node(std::numeric_limits<int>::min(), MAX_LEVEL);
@@ -201,3 +180,6 @@ int main()
 	cout << "=========== Lazy Skip List Set ===========" << endl;
 	DoJob();
 }
+
+
+
