@@ -49,7 +49,7 @@ public:
 			for (int lvl = 0; lvl <= topLvl; lvl++)
 				node->next[lvl] = CAS::TaggedPointer<Node>(currs[lvl], false);
 
-			if (!prevs[0]->next[0].CAS(currs[0], node, false, false)) 
+			if (!prevs[0]->next[0].CAS(currs[0], node, false, false))
 				continue;
 
 			for (int lvl = 1; lvl <= topLvl; lvl++) {
@@ -65,18 +65,20 @@ public:
 	bool remove(int x) {
 		while (true) {
 			if (!find(x, prevs, currs)) return false;
-			auto taget = currs[0];
+			auto target = currs[0];
 			bool failed = false;
-			for (int lvl = currs[0]->topLvl; 1 <= lvl; lvl--) {
-				if (!prevs[lvl]->next[lvl].CAS(currs[lvl], currs[lvl], false, true)) {
+			for (int lvl = target->topLvl; 1 <= lvl; lvl--) {
+				auto [next, removed] = target->next[lvl].getPtrTag();
+				if (!target->next[lvl].attemptTag(next, true)) {
 					failed = true;
 					break;
 				}
 			}
 
-			if (failed)continue;
+			if (failed) continue;
 
-			if (prevs[0]->next[0].CAS(currs[0], currs[0], false, true))
+			auto [next, removed] = target->next[0].getPtrTag();
+			if (!target->next[0].CAS(next, next, false, true))
 				continue;
 
 			find(x, prevs, currs);
@@ -89,29 +91,29 @@ public:
 	}
 
 	bool find(int x, Node* volatile prevs[], Node* volatile currs[]) {
-		Node* prev, * curr, * next;
-		bool tag{ false };
 	retry:
-		while (true) {
-			prev = head;
-			for (int cl = MAX_LEVEL; 0 <= cl; cl--) {
-				curr = prev->next[cl].getPtr();
-				while (true) {
-					std::tie(next, tag) = curr->next[cl].getPtrTag();
-					while (tag) {
-						if (!prev->next[cl].CAS(curr, next, false, false)) 
-							goto retry;
-						curr = prev->next[cl].getPtr();
-					std:tie(next, tag) = curr->next[cl].getPtrTag();
-					}
-					if (curr->value < x) { prev = curr; curr = next; }
-					else break;
+		prevs[MAX_LEVEL] = head;
+		for (int lvl = MAX_LEVEL; 0 <= lvl; lvl--) {
+			currs[lvl] = prevs[lvl]->next[lvl].getPtr();
+			while (true) {
+				auto [next, removed] = currs[lvl]->next[lvl].getPtrTag();
+				while (removed) {
+					if (!prevs[lvl]->next[lvl].CAS(currs[lvl], next, false, false))
+						goto retry;
+					currs[lvl] = next;
+					std::tie(next, removed) = currs[lvl]->next[lvl].getPtrTag();
 				}
-				prevs[cl] = prev;
-				currs[cl] = curr;
+				if (currs[lvl]->value < x) {
+					prevs[lvl] = currs[lvl];
+					currs[lvl] = next;
+				}
+				else {
+					if (lvl == 0) return currs[0]->value == x;
+					prevs[lvl - 1] = prevs[lvl];
+					break;
+				}
 			}
 		}
-		return curr->value == x;
 	}
 
 	void show() {
@@ -177,7 +179,7 @@ int main()
 		}
 	};
 
-	cout << "=========== Lazy Skip List Set ===========" << endl;
+	cout << "=========== Lock Free Skip List Set ===========" << endl;
 	DoJob();
 }
 

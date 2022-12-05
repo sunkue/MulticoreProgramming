@@ -115,6 +115,9 @@
     <ClCompile Include="lazy skip_list.cpp">
       <Filter>Tested Case\DataStructure\SkipList %28Set%29</Filter>
     </ClCompile>
+    <ClCompile Include="lock_free skip_list.cpp">
+      <Filter>Tested Case\DataStructure\SkipList %28Set%29</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Timer.hpp">
