@@ -9,6 +9,7 @@
 using namespace std;
 using namespace chrono;
 
+// compile with /openmp
 
 int main()
 {

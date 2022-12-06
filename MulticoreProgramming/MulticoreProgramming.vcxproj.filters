@@ -38,6 +38,9 @@
     <Filter Include="Tested Case\DataStructure\SkipList %28Set%29\HistoryChecker">
       <UniqueIdentifier>{14a90870-07f6-47ba-956a-689e3d4d9e63}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tested Case\Library">
+      <UniqueIdentifier>{1516d437-4f0a-4fde-9da8-f3201212aa2c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Peterson.cpp">
@@ -117,6 +120,9 @@
     </ClCompile>
     <ClCompile Include="lock_free skip_list.cpp">
       <Filter>Tested Case\DataStructure\SkipList %28Set%29</Filter>
+    </ClCompile>
+    <ClCompile Include="openmp.cpp">
+      <Filter>Tested Case\Library</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
