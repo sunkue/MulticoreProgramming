@@ -66,6 +66,33 @@ public:
 		while (true) {
 			if (!find(x, prevs, currs)) return false;
 			auto target = currs[0];
+			for (int lvl = target->topLvl; 1 <= lvl; lvl--) {
+				auto [next, removed] = target->next[lvl].getPtrTag();
+				while (!removed) {
+					target->next[lvl].attemptTag(next, true);
+					std::tie(next, removed) = target->next[lvl].getPtrTag();
+				}
+			}
+
+			auto [next, removed] = target->next[0].getPtrTag();
+
+			while (true) {
+				bool it = target->next[0].CAS(next, next, false, true);
+				std::tie(next, removed) = currs[0]->next[0].getPtrTag();
+				if (it) {
+					find(x, prevs, currs);
+					return true;
+				}
+				else if (removed)return false;
+			}
+		}
+	}
+
+	bool remove1(int x) {
+		// maybe not safe
+		while (true) {
+			if (!find(x, prevs, currs)) return false;
+			auto target = currs[0];
 			bool failed = false;
 			for (int lvl = target->topLvl; 1 <= lvl; lvl--) {
 				auto [next, removed] = target->next[lvl].getPtrTag();

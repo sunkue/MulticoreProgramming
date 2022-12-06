@@ -10,6 +10,7 @@ using namespace std;
 using namespace chrono;
 
 constexpr int operationNum = 400'0000;
+constexpr int maxThreads = 32;
 constexpr int range = 1000;
 constexpr int checkerSize = range;
 
@@ -300,6 +301,33 @@ namespace LF_SL {
 			while (true) {
 				if (!find(x, prevs, currs)) return false;
 				auto target = currs[0];
+				for (int lvl = target->topLvl; 1 <= lvl; lvl--) {
+					auto [next, removed] = target->next[lvl].getPtrTag();
+					while (!removed) {
+						target->next[lvl].attemptTag(next, true);
+						std::tie(next, removed) = target->next[lvl].getPtrTag();
+					}
+				}
+
+				auto [next, removed] = target->next[0].getPtrTag();
+
+				while (true) {
+					bool it = target->next[0].CAS(next, next, false, true);
+					std::tie(next, removed) = currs[0]->next[0].getPtrTag();
+					if (it) {
+						find(x, prevs, currs);
+						return true;
+					}
+					else if (removed)return false;
+				}
+			}
+		}
+
+		bool remove1(int x) {
+			// maybe not safe
+			while (true) {
+				if (!find(x, prevs, currs)) return false;
+				auto target = currs[0];
 				bool failed = false;
 				for (int lvl = target->topLvl; 1 <= lvl; lvl--) {
 					auto [next, removed] = target->next[lvl].getPtrTag();
@@ -433,7 +461,7 @@ void worker_check(vector<HISTORY>* history, int num_threads)
 	}
 }
 
-void check_history(array <vector <HISTORY>, 16>& history, int num_threads)
+void check_history(array <vector <HISTORY>, maxThreads>& history, int num_threads)
 {
 	array <int, checkerSize> survive = {};
 	cout << "Checking Consistency : ";
@@ -477,9 +505,9 @@ void check_history(array <vector <HISTORY>, 16>& history, int num_threads)
 
 int main()
 {
-	for (int num_threads = 1; num_threads <= 16; num_threads *= 2) {
+	for (int num_threads = 1; num_threads <= maxThreads; num_threads *= 2) {
 		vector <thread> threads;
-		array<vector <HISTORY>, 16> history;
+		array<vector <HISTORY>, maxThreads> history;
 		my_set.reset();
 		auto start_t = high_resolution_clock::now();
 		for (int i = 0; i < num_threads; ++i)
@@ -494,9 +522,9 @@ int main()
 		check_history(history, num_threads);
 	}
 
-	for (int num_threads = 1; num_threads <= 16; num_threads *= 2) {
+	for (int num_threads = 1; num_threads <= maxThreads; num_threads *= 2) {
 		vector <thread> threads;
-		array<vector <HISTORY>, 16> history;
+		array<vector <HISTORY>, maxThreads> history;
 		my_set.reset();
 		auto start_t = high_resolution_clock::now();
 		for (int i = 0; i < num_threads; ++i)
