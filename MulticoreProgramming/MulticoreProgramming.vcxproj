@@ -225,6 +225,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="tbb hash_map vs unodered_map.cpp" />
+    <ClCompile Include="tbb vs concurrency.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="univ set.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -234,7 +238,19 @@
     <ClInclude Include="CAS.hpp" />
     <ClInclude Include="Timer.hpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\packages\inteltbb.redist.win.2021.7.1.15305\build\native\inteltbb.redist.win.targets" Condition="Exists('..\packages\inteltbb.redist.win.2021.7.1.15305\build\native\inteltbb.redist.win.targets')" />
+    <Import Project="..\packages\inteltbb.devel.win.2021.7.1.15305\build\native\inteltbb.devel.win.targets" Condition="Exists('..\packages\inteltbb.devel.win.2021.7.1.15305\build\native\inteltbb.devel.win.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>이 프로젝트는 이 컴퓨터에 없는 NuGet 패키지를 참조합니다. 해당 패키지를 다운로드하려면 NuGet 패키지 복원을 사용하십시오. 자세한 내용은 http://go.microsoft.com/fwlink/?LinkID=322105를 참조하십시오. 누락된 파일은 {0}입니다.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\inteltbb.redist.win.2021.7.1.15305\build\native\inteltbb.redist.win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\inteltbb.redist.win.2021.7.1.15305\build\native\inteltbb.redist.win.targets'))" />
+    <Error Condition="!Exists('..\packages\inteltbb.devel.win.2021.7.1.15305\build\native\inteltbb.devel.win.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\inteltbb.devel.win.2021.7.1.15305\build\native\inteltbb.devel.win.targets'))" />
+  </Target>
 </Project>

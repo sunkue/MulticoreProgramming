@@ -17,6 +17,7 @@
 #include <concurrent_unordered_map.h>
 
 using namespace std;
+//#define UseStdParallelFor
 
 constexpr auto NUM_TEST = 500'0000;
 constexpr auto MAX_THREAD = 1;
@@ -31,22 +32,34 @@ void Benchmark() {
 }
 
 void Benchmark2() {
-	tbb::concurrent_hash_map<string, int> table;
-
-	tbb::parallel_for(0, NUM_TEST, [&table](int i) {
-		decltype(table)::accessor a;
-		table.insert(a, Data[i]);
-		a->second++;
-		});
-}
-
-void Benchmark3() {
 	tbb::concurrent_unordered_map<string, int> table;
-
+#ifdef UseStdParallelFor
+	std::vector<int> v(NUM_TEST); iota(v.begin(), v.end(), 0);
+	std::for_each(std::execution::par, v.begin(), v.end(), [&table](auto i) {
+		table[Data[i]]++;
+		});
+#else
 	tbb::parallel_for(0, NUM_TEST, [&table](int i) {
 		table[Data[i]]++;
 		});
+#endif
 }
+
+void Benchmark3() {
+	concurrency::concurrent_unordered_map<string, int> table;
+
+#ifdef UseStdParallelFor
+	std::vector<int> v(NUM_TEST); iota(v.begin(), v.end(), 0);
+	std::for_each(std::execution::par, v.begin(), v.end(), [&table](auto i) {
+		table[Data[i]]++;
+		});
+#else
+	tbb::parallel_for(0, NUM_TEST, [&table](int i) {
+		table[Data[i]]++;
+		});
+#endif
+}
+
 
 int main()
 {
@@ -63,11 +76,10 @@ int main()
 
 	for (int i = 0; i < NUM_TEST; i++)Data[i] = "##2" + to_string(i);
 
-	// hash map 은 삭제가 쓰레드 세이프하다.
-
-	DoJob(Benchmark);  //19
-	DoJob(Benchmark3); //10
-	DoJob(Benchmark2); //6
+	// concurrency is legacy of tbb
+	DoJob(Benchmark3);//16
+	DoJob(Benchmark2);//10
+	DoJob(Benchmark); //19
 }
 
 

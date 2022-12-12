@@ -41,6 +41,12 @@
     <Filter Include="Tested Case\Library">
       <UniqueIdentifier>{1516d437-4f0a-4fde-9da8-f3201212aa2c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Tested Case\Library\tbb">
+      <UniqueIdentifier>{8d0366a4-5f0a-4449-9fd1-53a16648ca5c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Tested Case\Library\openmp">
+      <UniqueIdentifier>{57d6f032-99c3-436d-88f1-c84c437ec92b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Peterson.cpp">
@@ -121,8 +127,14 @@
     <ClCompile Include="lock_free skip_list.cpp">
       <Filter>Tested Case\DataStructure\SkipList %28Set%29</Filter>
     </ClCompile>
+    <ClCompile Include="tbb vs concurrency.cpp">
+      <Filter>Tested Case\Library\tbb</Filter>
+    </ClCompile>
     <ClCompile Include="openmp.cpp">
-      <Filter>Tested Case\Library</Filter>
+      <Filter>Tested Case\Library\openmp</Filter>
+    </ClCompile>
+    <ClCompile Include="tbb hash_map vs unodered_map.cpp">
+      <Filter>Tested Case\Library\tbb</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -132,5 +144,8 @@
     <ClInclude Include="CAS.hpp">
       <Filter>Helper</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
